@@ -1,4 +1,4 @@
-import { framer, Draggable } from "framer-plugin";
+import { framer, Draggable, useIsAllowedTo } from "framer-plugin";
 import { useState, useEffect } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -21,8 +21,10 @@ void framer.showUI({
 	resizable: IS_CANVAS,
 });
 
-type VectorItem = { name: string; svg: string };
+type VectorItem = { name: string; svg: string; componentUrl: string; color: string | null };
 const vectors = vectorsData as VectorItem[];
+
+type InsertAs = "svg" | "vectorSet" | "image";
 
 export function App() {
 	const [showAdminUI, setShowAdminUI] = useState(false);
@@ -45,6 +47,8 @@ export function App() {
 
 function PaymentCardLogosApp() {
 	const [query, setQuery] = useState("");
+	const isAllowedToEdit = useIsAllowedTo("addSVG", "addImage", "setImage", "addComponentInstance");
+	const [insertAs, setInsertAs] = useState<InsertAs | "">("");
 
 	const filteredVectors = vectors.filter((item) => {
 		const q = query.trim().toLowerCase();
@@ -53,26 +57,61 @@ function PaymentCardLogosApp() {
 	});
 
 	const onVectorClick = async (item: VectorItem) => {
-		await framer.addSVG({ svg: item.svg });
+		const currentInsertAs = insertAs === "" ? "svg" : insertAs;
 
-		framer.notify(`Inserted ${item.name}`, { variant: "success" });
+		switch (currentInsertAs) {
+			case "svg": {
+				await framer.addSVG({ svg: item.svg });
+				break;
+			}
+			case "vectorSet": {
+				// `vectors.json` provides the module URL we can use to insert the ComponentInstance.
+				const componentUrl = item.componentUrl;
+				if (typeof componentUrl !== "string" || !componentUrl) {
+					framer.notify(`Missing component URL for ${item.name}`, { variant: "error" });
+					return;
+				}
+				await framer.addComponentInstance({ url: componentUrl });
+				break;
+			}
+			case "image": {
+				const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
+				await framer.addImage({ name: item.name, image: svgDataUrl, altText: item.name });
+				break;
+			}
+		}
+
+		framer.notify(`Inserted ${item.name} as ${currentInsertAs}`, { variant: "success" });
 	};
 
 	return (
 		<main className="payment-card-logos">
-			<div className="search-header">
-				<input
-					type="text"
-					placeholder="Search…"
-					value={query}
-					className="search-input"
-					onChange={(e) => setQuery(e.target.value)}
-				/>
-				<div className="search-icon-wrap">
-					<SearchIcon />
+			<div className="toolbar">
+				<div className="search-header">
+					<input
+						type="text"
+						placeholder="Search…"
+						value={query}
+						className="search-input"
+						onChange={(e) => setQuery(e.target.value)}
+					/>
+					<div className="search-icon-wrap">
+						<SearchIcon />
+					</div>
 				</div>
+				<select
+					className="insert-type-dropdown"
+					value={insertAs}
+					onChange={(e) => setInsertAs(e.target.value as InsertAs | "")}
+				>
+					<option value="" disabled>
+						Insert as…
+					</option>
+					<option value="svg">SVG</option>
+					<option value="vectorSet">Vector Set</option>
+					<option value="image">Image</option>
+				</select>
 			</div>
-
 			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
 				{filteredVectors.map((item) => (
 					<Draggable

@@ -20,8 +20,16 @@ main {
 	gap: 10px;
 }
 
+.toolbar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	width: 100%;
+}
+
 .search-header {
-	background-color: var(--framer-color-bg);
 	z-index: 10;
 	position: relative;
 	width: 100%;
@@ -44,6 +52,11 @@ main {
 	color: var(--framer-color-text-tertiary);
 }
 
+.insert-type-dropdown {
+	width: 95px;
+	user-select: none;
+}
+
 .payment-card-logos {
 	overflow: auto;
 }
@@ -51,7 +64,7 @@ main {
 .vectors-grid {
 	width: 100%;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 5)), 1fr));
 	gap: 10px;
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
@@ -60,8 +73,6 @@ main {
 }
 
 .vector-tile {
-	background: var(--framer-color-bg-secondary);
-	color: var(--framer-color-text-secondary);
 	border-radius: 10px;
 	padding-left: 10px;
 	padding-right: 10px;
@@ -76,11 +87,32 @@ main {
 	aspect-ratio: 1;
 	cursor: pointer;
 	user-select: none;
+	position: relative;
+	--bg-opacity: 0.1;
 }
 
 .vector-tile:hover {
+	--bg-opacity: 0.2;
+}
+
+.vector-tile.no-bg-color {
+	background: var(--framer-color-bg-secondary);
+	color: var(--framer-color-text-secondary);
+}
+
+.vector-tile.no-bg-color:hover {
 	background: var(--framer-color-bg-tertiary);
 	color: var(--framer-color-text-primary);
+}
+
+.vector-tile-bg {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+	opacity: var(--bg-opacity);
 }
 
 .vector-svg-container {
