@@ -84,11 +84,11 @@ main {
 }
 
 .vectors-grid.canvas {
-	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 5)), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(max(100px, calc(100% / 5)), 1fr));
 }
 
 .vectors-grid.image {
-	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 6)), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(max(100px, calc(100% / 6)), 1fr));
 }
 
 .vector-tile {

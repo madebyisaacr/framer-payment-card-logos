@@ -5,6 +5,8 @@ import {
 	isFrameNode,
 	isWebPageNode,
 	isComponentNode,
+	type CanvasRootNode,
+	type FrameNode,
 } from "framer-plugin";
 import { useEffect, useState } from "react";
 import AdminUI from "./AdminUI";
@@ -19,7 +21,7 @@ const IS_LOCALHOST =
 	(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 const PERMISSION_METHODS = IS_CANVAS
-	? ["addSVG", "addImage", "setImage", "addComponentInstance"]
+	? ["addSVG", "createFrameNode", "setImage", "addComponentInstance"]
 	: ["setImage"];
 
 void framer.showUI({
@@ -36,11 +38,11 @@ void framer.showUI({
 type VectorItem = { name: string; svg: string; componentUrl: string; color: string | null };
 const vectors = vectorsData as VectorItem[];
 
-type InsertAs = "svg" | "vectorSet" | "image";
+type InsertAs = "vectorSet" | "svg" | "image";
 
 const INSERT_AS_TITLES = {
-	svg: "SVG",
 	vectorSet: "Vector Set",
+	svg: "SVG",
 	image: "Image",
 };
 
@@ -87,7 +89,7 @@ function PaymentCardLogosApp() {
 		} catch {
 			// Ignore storage errors (private mode / sandboxed environments).
 		}
-		return "svg";
+		return "vectorSet";
 	});
 
 	useEffect(() => {
@@ -123,7 +125,65 @@ function PaymentCardLogosApp() {
 
 		switch (insertAs) {
 			case "svg": {
-				await framer.addSVG({ svg: item.svg });
+				const [selection, canvasRoot] = await Promise.all([
+					framer.getSelection(),
+					framer.getCanvasRoot(),
+				]);
+				const canvasRootChildren = await canvasRoot.getChildren();
+
+				const selectedNodes: (CanvasRootNode | FrameNode)[] = [canvasRoot];
+
+				for (const node of selection) {
+					if (isFrameNode(node)) {
+						if (selectedNodes.length >= 50) {
+							break;
+						}
+						selectedNodes.push(node);
+					}
+				}
+
+				const primaryFrame = canvasRootChildren.find(
+					(child) => isFrameNode(child) && (child.isPrimaryBreakpoint || child.isPrimaryVariant)
+				);
+				if (primaryFrame && isFrameNode(primaryFrame)) {
+					selectedNodes.push(primaryFrame);
+				}
+
+				const beforeUnknownNodeIds: string[] = [];
+				const allBeforeChildrenArrays = await Promise.all(
+					selectedNodes.map((node) => node.getChildren())
+				);
+				for (const children of allBeforeChildrenArrays) {
+					for (const child of children) {
+						if (child["__class"] === "UnknownNode") {
+							beforeUnknownNodeIds.push(child.id);
+						}
+					}
+				}
+
+				await framer.addSVG({ svg: item.svg, name: vectorName });
+
+				const afterUnknownNodeIds = [];
+				const allAfterChildrenArrays = await Promise.all(
+					selectedNodes.map((node) => node.getChildren())
+				);
+				for (const children of allAfterChildrenArrays) {
+					for (const child of children) {
+						if (child["__class"] === "UnknownNode") {
+							afterUnknownNodeIds.push(child.id);
+						}
+					}
+				}
+
+				const newNodeIds = afterUnknownNodeIds.filter((id) => !beforeUnknownNodeIds.includes(id));
+
+				if (newNodeIds.length > 0) {
+					framer.setSelection(newNodeIds);
+					framer.zoomIntoView(newNodeIds, {
+						maxZoom: 1,
+						skipIfVisible: true,
+					});
+				}
 				break;
 			}
 			case "vectorSet": {
@@ -205,8 +265,8 @@ function PaymentCardLogosApp() {
 						<option value="" disabled>
 							Insert as…
 						</option>
-						<option value="svg">{INSERT_AS_TITLES.svg}</option>
 						<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
+						<option value="svg">{INSERT_AS_TITLES.svg}</option>
 						<option value="image">{INSERT_AS_TITLES.image}</option>
 					</select>
 				)}
@@ -220,7 +280,7 @@ function PaymentCardLogosApp() {
 					aria-label="Payment card logos"
 				>
 					{filteredVectors.map((item) => {
-						const displayName = formatVectorName(item.name);
+						const vectorName = formatVectorName(item.name);
 						return (
 							<Draggable
 								key={item.name}
@@ -236,8 +296,8 @@ function PaymentCardLogosApp() {
 											return {
 												type: "image",
 												image: svgToImageDataUrl(item.svg),
-												altText: item.name,
-												name: item.name,
+												altText: vectorName,
+												name: vectorName,
 											};
 										}
 										case "svg":
@@ -255,7 +315,7 @@ function PaymentCardLogosApp() {
 									key={item.name}
 									className={cx("vector-tile", item.color === null && "no-bg-color")}
 									role="gridcell"
-									title={displayName}
+									title={vectorName}
 									onClick={() => {
 										onVectorClick(item);
 									}}
@@ -275,7 +335,7 @@ function PaymentCardLogosApp() {
 										/>
 									</div>
 									<div className="vector-name-container">
-										<span className="vector-name">{displayName}</span>
+										<span className="vector-name">{vectorName}</span>
 									</div>
 								</div>
 							</Draggable>
