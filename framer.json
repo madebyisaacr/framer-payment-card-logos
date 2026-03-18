@@ -1,6 +1,6 @@
 {
 	"id": "0e59c8",
 	"name": "Payment Card Logos",
-	"modes": ["canvas"],
+	"modes": ["canvas", "image"],
 	"icon": "/icon.svg"
 }

@@ -1,46 +1,79 @@
-import { framer, CanvasNode } from "framer-plugin";
+import { framer } from "framer-plugin";
 import { useState, useEffect } from "react";
+import AdminUI from "./AdminUI";
+import { SearchIcon } from "./Icons";
 import "./App.css";
+import vectorsData from "./data/vectors.json";
 
-framer.showUI({
+void framer.showUI({
 	position: "top right",
-	width: 240,
-	height: 95,
+	width: 260,
+	height: 400,
 });
 
-function useSelection() {
-	const [selection, setSelection] = useState<CanvasNode[]>([]);
+const isLocalhost =
+	typeof window !== "undefined" &&
+	(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-	useEffect(() => {
-		return framer.subscribeToSelection(setSelection);
-	}, []);
-
-	return selection;
-}
+type VectorItem = { name: string; svg: string };
+const vectors = vectorsData as VectorItem[];
 
 export function App() {
-	const selection = useSelection();
-	const layer = selection.length === 1 ? "layer" : "layers";
+	const [showAdminUI, setShowAdminUI] = useState(false);
 
-	const handleAddSvg = async () => {
-		await framer.addSVG({
-			svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path fill="#999" d="M20 0v8h-8L4 0ZM4 8h8l8 8h-8v8l-8-8Z"/></svg>`,
-			name: "Logo.svg",
-		});
-	};
+	useEffect(() => {
+		if (!isLocalhost) {
+			void framer.setMenu([]);
+			return;
+		}
+		void framer.setMenu([
+			{
+				label: showAdminUI ? "Back" : "Admin Menu",
+				onAction: () => setShowAdminUI((prev) => !prev),
+			},
+		]);
+	}, [showAdminUI]);
+
+	return isLocalhost && showAdminUI ? <AdminUI /> : <PaymentCardLogosApp />;
+}
+
+function PaymentCardLogosApp() {
+	const [query, setQuery] = useState("");
+
+	const filteredVectors = vectors.filter((item) => {
+		const q = query.trim().toLowerCase();
+		if (!q) return true;
+		return item.name.toLowerCase().includes(q);
+	});
 
 	return (
-		<main>
-			<p>
-				Welcome! Check out the{" "}
-				<a href="https://framer.com/developers/plugins/introduction" target="_blank">
-					Docs
-				</a>{" "}
-				to start. You have {selection.length} {layer} selected.
-			</p>
-			<button className="framer-button-primary" onClick={handleAddSvg}>
-				Insert Logo
-			</button>
+		<main className="payment-card-logos">
+			<div className="search-header">
+				<input
+					type="text"
+					placeholder="Search…"
+					value={query}
+					className="search-input"
+					onChange={(e) => setQuery(e.target.value)}
+				/>
+				<div className="search-icon-wrap">
+					<SearchIcon />
+				</div>
+			</div>
+
+			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
+				{filteredVectors.map((item) => (
+					<div key={item.name} className="vector-tile" role="gridcell" title={item.name}>
+						<div
+							className="vector-svg"
+							dangerouslySetInnerHTML={{
+								__html: item.svg,
+							}}
+						/>
+						<div className="vector-name">{item.name}</div>
+					</div>
+				))}
+			</div>
 		</main>
 	);
 }
