@@ -93,16 +93,10 @@ main {
 
 .vector-tile {
 	border-radius: 10px;
-	padding-left: 10px;
-	padding-right: 10px;
-	padding-bottom: 10px;
 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: space-between;
 	transition:
-		background 0.1s ease-in-out,
-		color 0.1s ease-in-out;
+		background 0.1s ease,
+		color 0.1s ease;
 	aspect-ratio: 1;
 	cursor: pointer;
 	user-select: none;
@@ -111,12 +105,27 @@ main {
 	--bg-opacity: 0.1;
 }
 
-.vector-tile:hover {
-	--bg-opacity: 0.15;
+.vector-tile-content {
+	width: 100%;
+	height: 100%;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-bottom: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: space-between;
+	position: relative;
+	opacity: 1;
+	transition: opacity 0.1s ease;
 }
 
-.vector-tile > * {
-	position: relative;
+.vector-tile-content.is-inserting {
+	opacity: 0.5;
+}
+
+.vector-tile:hover {
+	--bg-opacity: 0.15;
 }
 
 [data-framer-theme="dark"] .vector-tile,
@@ -139,7 +148,7 @@ main {
 	height: 100%;
 	border-radius: inherit;
 	opacity: var(--bg-opacity);
-	transition: opacity 0.1s ease-in-out;
+	transition: opacity 0.1s ease;
 }
 
 [data-framer-theme="dark"] .vector-tile-bg {
@@ -186,4 +195,21 @@ main {
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
 	line-clamp: 2;
+}
+
+.vector-tile > .spinner-container {
+	opacity: 0;
+	transition: opacity 0.1s ease;
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: inherit;
+	pointer-events: none;
+}
+
+.vector-tile > .spinner-container.is-visible {
+	opacity: 1;
 }

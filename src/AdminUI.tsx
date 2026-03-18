@@ -58,6 +58,7 @@ export default function AdminUI() {
 				}
 
 				result.push({
+					id: vectorSetItem.id,
 					name: vectorSetItem.name,
 					svg,
 					componentUrl,

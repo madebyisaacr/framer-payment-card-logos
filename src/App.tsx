@@ -8,7 +8,7 @@ import {
 	type CanvasRootNode,
 	type FrameNode,
 } from "framer-plugin";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
 import "./App.css";
@@ -35,7 +35,13 @@ void framer.showUI({
 	resizable: IS_CANVAS,
 });
 
-type VectorItem = { name: string; svg: string; componentUrl: string; color: string | null };
+type VectorItem = {
+	id: string;
+	name: string;
+	svg: string;
+	componentUrl: string;
+	color: string | null;
+};
 const vectors = vectorsData as VectorItem[];
 
 type InsertAs = "vectorSet" | "svg" | "image";
@@ -79,7 +85,9 @@ export function App() {
 }
 
 function PaymentCardLogosApp() {
-	const isAllowedToEdit = useIsAllowedTo(...PERMISSION_METHODS);
+	const isAllowedToEdit = useIsAllowedTo(
+		...(PERMISSION_METHODS as unknown as Parameters<typeof useIsAllowedTo>)
+	);
 
 	const [query, setQuery] = useState("");
 	const [insertAs, setInsertAs] = useState<InsertAs>(() => {
@@ -91,6 +99,9 @@ function PaymentCardLogosApp() {
 		}
 		return "vectorSet";
 	});
+
+	const insertRequestIdRef = useRef(0);
+	const [insertingVectorId, setInsertingVectorId] = useState<string | null>(null);
 
 	useEffect(() => {
 		try {
@@ -113,130 +124,139 @@ function PaymentCardLogosApp() {
 		}
 
 		const vectorName = formatVectorName(item.name);
+		const requestId = ++insertRequestIdRef.current;
+		setInsertingVectorId(item.id);
 
-		if (!IS_CANVAS) {
-			await framer.setImage({
-				name: vectorName,
-				image: svgToImageDataUrl(item.svg),
-				altText: vectorName,
-			});
-			framer.closePlugin();
-		}
-
-		switch (insertAs) {
-			case "svg": {
-				const [selection, canvasRoot] = await Promise.all([
-					framer.getSelection(),
-					framer.getCanvasRoot(),
-				]);
-				const canvasRootChildren = await canvasRoot.getChildren();
-
-				const selectedNodes: (CanvasRootNode | FrameNode)[] = [canvasRoot];
-
-				for (const node of selection) {
-					if (isFrameNode(node)) {
-						if (selectedNodes.length >= 50) {
-							break;
-						}
-						selectedNodes.push(node);
-					}
-				}
-
-				const primaryFrame = canvasRootChildren.find(
-					(child) => isFrameNode(child) && (child.isPrimaryBreakpoint || child.isPrimaryVariant)
-				);
-				if (primaryFrame && isFrameNode(primaryFrame)) {
-					selectedNodes.push(primaryFrame);
-				}
-
-				const beforeUnknownNodeIds: string[] = [];
-				const allBeforeChildrenArrays = await Promise.all(
-					selectedNodes.map((node) => node.getChildren())
-				);
-				for (const children of allBeforeChildrenArrays) {
-					for (const child of children) {
-						if (child["__class"] === "UnknownNode") {
-							beforeUnknownNodeIds.push(child.id);
-						}
-					}
-				}
-
-				await framer.addSVG({ svg: item.svg, name: vectorName });
-
-				const afterUnknownNodeIds = [];
-				const allAfterChildrenArrays = await Promise.all(
-					selectedNodes.map((node) => node.getChildren())
-				);
-				for (const children of allAfterChildrenArrays) {
-					for (const child of children) {
-						if (child["__class"] === "UnknownNode") {
-							afterUnknownNodeIds.push(child.id);
-						}
-					}
-				}
-
-				const newNodeIds = afterUnknownNodeIds.filter((id) => !beforeUnknownNodeIds.includes(id));
-
-				if (newNodeIds.length > 0) {
-					framer.setSelection(newNodeIds);
-					framer.zoomIntoView(newNodeIds, {
-						maxZoom: 1,
-						skipIfVisible: true,
-					});
-				}
-				break;
-			}
-			case "vectorSet": {
-				// `vectors.json` provides the module URL we can use to insert the ComponentInstance.
-				const componentUrl = item.componentUrl;
-				if (typeof componentUrl !== "string" || !componentUrl) {
-					framer.notify(`Missing component URL for ${vectorName}`, { variant: "error" });
-					return;
-				}
-
-				const parentId = await calculateParentId();
-
-				const componentInstanceNode = await framer.addComponentInstance({ url: componentUrl });
-				if (componentInstanceNode) {
-					await framer.setParent(componentInstanceNode.id, parentId);
-					framer.setSelection([componentInstanceNode.id]);
-					await new Promise((resolve) => setTimeout(resolve, 50));
-					framer.zoomIntoView(componentInstanceNode.id, {
-						maxZoom: 1,
-					});
-				}
-				break;
-			}
-			case "image": {
-				const parentId = await calculateParentId();
-
-				const image = await framer.uploadImage({
+		try {
+			if (!IS_CANVAS) {
+				await framer.setImage({
+					name: vectorName,
 					image: svgToImageDataUrl(item.svg),
 					altText: vectorName,
 				});
-				const frame = await framer.createFrameNode(
-					{
-						name: vectorName,
-						width: "50px",
-						height: "32px",
-						backgroundImage: image,
-					},
-					parentId
-				);
-				if (frame) {
-					framer.setSelection([frame.id]);
-				}
-				break;
+				framer.closePlugin();
 			}
-			default: {
-				framer.notify("Unsupported insert as selection", { variant: "error" });
-				return;
+
+			switch (insertAs) {
+				case "svg": {
+					const [selection, canvasRoot] = await Promise.all([
+						framer.getSelection(),
+						framer.getCanvasRoot(),
+					]);
+					const canvasRootChildren = await canvasRoot.getChildren();
+
+					const selectedNodes: (CanvasRootNode | FrameNode)[] = [canvasRoot];
+
+					for (const node of selection) {
+						if (isFrameNode(node)) {
+							if (selectedNodes.length >= 50) {
+								break;
+							}
+							selectedNodes.push(node);
+						}
+					}
+
+					const primaryFrame = canvasRootChildren.find(
+						(child) => isFrameNode(child) && (child.isPrimaryBreakpoint || child.isPrimaryVariant)
+					);
+					if (primaryFrame && isFrameNode(primaryFrame)) {
+						selectedNodes.push(primaryFrame);
+					}
+
+					const beforeUnknownNodeIds: string[] = [];
+					const allBeforeChildrenArrays = await Promise.all(
+						selectedNodes.map((node) => node.getChildren())
+					);
+					for (const children of allBeforeChildrenArrays) {
+						for (const child of children) {
+							if (child["__class"] === "UnknownNode") {
+								beforeUnknownNodeIds.push(child.id);
+							}
+						}
+					}
+
+					await framer.addSVG({ svg: item.svg, name: vectorName });
+
+					const afterUnknownNodeIds = [];
+					const allAfterChildrenArrays = await Promise.all(
+						selectedNodes.map((node) => node.getChildren())
+					);
+					for (const children of allAfterChildrenArrays) {
+						for (const child of children) {
+							if (child["__class"] === "UnknownNode") {
+								afterUnknownNodeIds.push(child.id);
+							}
+						}
+					}
+
+					const newNodeIds = afterUnknownNodeIds.filter((id) => !beforeUnknownNodeIds.includes(id));
+
+					if (newNodeIds.length > 0) {
+						framer.setSelection(newNodeIds);
+						framer.zoomIntoView(newNodeIds, {
+							maxZoom: 1,
+							skipIfVisible: true,
+						});
+					}
+					break;
+				}
+				case "vectorSet": {
+					// `vectors.json` provides the module URL we can use to insert the ComponentInstance.
+					const componentUrl = item.componentUrl;
+					if (typeof componentUrl !== "string" || !componentUrl) {
+						framer.notify(`Missing component URL for ${vectorName}`, { variant: "error" });
+						return;
+					}
+
+					const parentId = await calculateParentId();
+
+					const componentInstanceNode = await framer.addComponentInstance({ url: componentUrl });
+					if (componentInstanceNode) {
+						await framer.setParent(componentInstanceNode.id, parentId);
+						framer.setSelection([componentInstanceNode.id]);
+						await new Promise((resolve) => setTimeout(resolve, 50));
+						framer.zoomIntoView(componentInstanceNode.id, {
+							maxZoom: 1,
+						});
+					}
+					break;
+				}
+				case "image": {
+					const parentId = await calculateParentId();
+
+					const image = await framer.uploadImage({
+						image: svgToImageDataUrl(item.svg),
+						altText: vectorName,
+					});
+					const frame = await framer.createFrameNode(
+						{
+							name: vectorName,
+							width: "50px",
+							height: "32px",
+							backgroundImage: image,
+						},
+						parentId
+					);
+					if (frame) {
+						framer.setSelection([frame.id]);
+					}
+					break;
+				}
+				default: {
+					framer.notify("Unsupported insert as selection", { variant: "error" });
+					return;
+				}
+			}
+
+			framer.notify(`Inserted ${vectorName} card as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
+				variant: "success",
+			});
+		} finally {
+			// Avoid clobbering the state if a second insert was started.
+			if (insertRequestIdRef.current === requestId) {
+				setInsertingVectorId(null);
 			}
 		}
-
-		framer.notify(`Inserted ${vectorName} card as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
-			variant: "success",
-		});
 	};
 
 	return (
@@ -283,7 +303,7 @@ function PaymentCardLogosApp() {
 						const vectorName = formatVectorName(item.name);
 						return (
 							<Draggable
-								key={item.name}
+								key={item.id}
 								data={() => {
 									switch (insertAs) {
 										case "vectorSet": {
@@ -312,11 +332,12 @@ function PaymentCardLogosApp() {
 								}}
 							>
 								<div
-									key={item.name}
+									key={item.id}
 									className={cx("vector-tile", item.color === null && "no-bg-color")}
 									role="gridcell"
 									title={vectorName}
 									onClick={() => {
+										if (insertingVectorId === item.id) return;
 										onVectorClick(item);
 									}}
 									style={{
@@ -326,16 +347,31 @@ function PaymentCardLogosApp() {
 									{item.color && (
 										<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
 									)}
-									<div className="vector-svg-container">
-										<div
-											className="vector-svg"
-											dangerouslySetInnerHTML={{
-												__html: item.svg,
-											}}
-										/>
+									<div
+										className={cx(
+											"spinner-container",
+											insertingVectorId === item.id && "is-visible"
+										)}
+									>
+										<div className="framer-spinner" />
 									</div>
-									<div className="vector-name-container">
-										<span className="vector-name">{vectorName}</span>
+									<div
+										className={cx(
+											"vector-tile-content",
+											insertingVectorId === item.id && "is-inserting"
+										)}
+									>
+										<div className="vector-svg-container">
+											<div
+												className="vector-svg"
+												dangerouslySetInnerHTML={{
+													__html: item.svg,
+												}}
+											/>
+										</div>
+										<div className="vector-name-container">
+											<span className="vector-name">{vectorName}</span>
+										</div>
 									</div>
 								</div>
 							</Draggable>
