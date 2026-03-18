@@ -1,8 +1,6 @@
 {
-  "id": "0e59c8",
-  "name": "Framer Payment Card Logos",
-  "modes": [
-    "canvas"
-  ],
-  "icon": "/icon.svg"
+	"id": "0e59c8",
+	"name": "Payment Card Logos",
+	"modes": ["canvas"],
+	"icon": "/icon.svg"
 }
