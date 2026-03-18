@@ -1,4 +1,4 @@
-import { framer, isVectorSetItemNode, isFrameNode } from "framer-plugin";
+import { framer, useIsAllowedTo, isVectorSetItemNode, isFrameNode } from "framer-plugin";
 import { copyToClipboard } from "./utils";
 import { useState } from "react";
 import vectorsData from "./data/vectors.json";
@@ -7,6 +7,14 @@ const VECTOR_SET_NAME = "Payment Card Logos";
 
 export default function AdminUI() {
 	const [isLoading, setIsLoading] = useState(false);
+	const [isInsertingAllVectorsAsImages, setIsInsertingAllVectorsAsImages] = useState(false);
+
+	const isAllowedToEdit = useIsAllowedTo(
+		// `uploadImage` maps to `setImage` permissions, and inserting frames requires `createFrameNode`.
+		...(framer.mode === "canvas"
+			? (["createFrameNode", "setImage"] as const)
+			: (["setImage"] as const)) // In non-canvas mode, we won't show the insert button anyway.
+	);
 
 	const onCopyAll = async () => {
 		setIsLoading(true);
@@ -43,6 +51,19 @@ export default function AdminUI() {
 			}
 		}
 
+		const imagesNode = primaryBreakpointChildren?.find(
+			(child) => isFrameNode(child) && child.name === "Images"
+		);
+		const imageFrames = await imagesNode?.getChildren();
+		const imagesByName = {};
+		if (Array.isArray(imageFrames)) {
+			for (const imageFrame of imageFrames.filter(isFrameNode)) {
+				if (imageFrame.backgroundImage) {
+					imagesByName[imageFrame.name] = imageFrame.backgroundImage.url;
+				}
+			}
+		}
+
 		if (Array.isArray(vectorSetItems)) {
 			const result = [];
 
@@ -62,6 +83,7 @@ export default function AdminUI() {
 					name: vectorSetItem.name,
 					svg,
 					componentUrl,
+					imageUrl: imagesByName[vectorSetItem.name] || null,
 					color: colorsByName[vectorSetItem.name] || null,
 				});
 			}
@@ -94,12 +116,78 @@ export default function AdminUI() {
 		}
 	};
 
+	const onInsertAllVectorsAsImages = async () => {
+		if (framer.mode !== "canvas") {
+			framer.notify("Insert as images is only available in canvas mode", { variant: "error" });
+			return;
+		}
+		if (!isAllowedToEdit) {
+			framer.notify("You do not have permissions to edit this project", { variant: "error" });
+			return;
+		}
+
+		const selection = await framer.getSelection();
+		const selectedFrame = selection.length === 1 && isFrameNode(selection[0]) ? selection[0] : null;
+
+		if (!selectedFrame) {
+			framer.notify("Select a single frame to insert into", { variant: "error" });
+			return;
+		}
+
+		setIsInsertingAllVectorsAsImages(true);
+		const insertedFrameIds: string[] = [];
+
+		try {
+			for (const vector of vectorsData) {
+				const vectorName = vector.name;
+
+				const image = await framer.uploadImage({
+					image: svgToImageDataUrl(vector.svg),
+					altText: vectorName,
+				});
+
+				const frame = await framer.createFrameNode(
+					{
+						name: vectorName,
+						width: "50px",
+						height: "32px",
+						backgroundImage: image,
+					},
+					selectedFrame.id
+				);
+
+				if (frame?.id) insertedFrameIds.push(frame.id);
+			}
+
+			if (insertedFrameIds.length > 0) {
+				framer.setSelection(insertedFrameIds);
+				framer.zoomIntoView(insertedFrameIds, {
+					maxZoom: 1,
+					skipIfVisible: true,
+				});
+			}
+
+			framer.notify(`Inserted ${insertedFrameIds.length} vectors as images`, {
+				variant: "success",
+			});
+		} catch {
+			framer.notify("Failed to insert all vectors as images", { variant: "error" });
+		} finally {
+			setIsInsertingAllVectorsAsImages(false);
+		}
+	};
+
 	return (
 		<main className="admin-ui">
 			<button onClick={onCopyAll}>
 				{isLoading ? <div className="framer-spinner" /> : "Copy Vectors"}
 			</button>
 			<button onClick={onInsertFramesClick}>Insert Frames</button>
+			{framer.mode === "canvas" && (
+				<button onClick={onInsertAllVectorsAsImages} disabled={isInsertingAllVectorsAsImages}>
+					{isInsertingAllVectorsAsImages ? "Inserting…" : "Insert all as images"}
+				</button>
+			)}
 		</main>
 	);
 }
@@ -122,4 +210,8 @@ function rgbToHex(rgb: string): string {
 	};
 
 	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function svgToImageDataUrl(svg: string) {
+	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }

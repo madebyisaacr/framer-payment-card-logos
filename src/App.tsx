@@ -42,6 +42,7 @@ type VectorItem = {
 	svg: string;
 	componentUrl: string;
 	color: string | null;
+	imageUrl?: string | null;
 };
 const vectors = vectorsData as VectorItem[];
 
@@ -130,9 +131,15 @@ function PaymentCardLogosApp() {
 
 		try {
 			if (!IS_CANVAS) {
+				const imageUrl = item.imageUrl;
+				if (typeof imageUrl !== "string" || !imageUrl) {
+					framer.notify(`Missing imageUrl for ${vectorName}`, { variant: "error" });
+					return;
+				}
+
 				await framer.setImage({
 					name: vectorName,
-					image: svgToImageDataUrl(item.svg),
+					image: imageUrl,
 					altText: vectorName,
 				});
 				framer.closePlugin();
@@ -225,10 +232,17 @@ function PaymentCardLogosApp() {
 				case "image": {
 					const parentId = await calculateParentId();
 
+					const imageUrl = item.imageUrl;
+					if (typeof imageUrl !== "string" || !imageUrl) {
+						framer.notify(`Missing imageUrl for ${vectorName}`, { variant: "error" });
+						return;
+					}
+
 					const image = await framer.uploadImage({
-						image: svgToImageDataUrl(item.svg),
+						image: imageUrl,
 						altText: vectorName,
 					});
+
 					const frame = await framer.createFrameNode(
 						{
 							name: vectorName,
@@ -359,14 +373,16 @@ function PaymentCardLogosApp() {
 											return {
 												type: "componentInstance",
 												url: item.componentUrl,
+												previewImage: item.imageUrl ?? "",
 											};
 										}
 										case "image": {
 											return {
 												type: "image",
-												image: svgToImageDataUrl(item.svg),
+												image: item.imageUrl ?? "",
 												altText: vectorName,
 												name: vectorName,
+												previewImage: item.imageUrl ?? "",
 											};
 										}
 										case "svg":
@@ -433,10 +449,6 @@ function PaymentCardLogosApp() {
 			)}
 		</main>
 	);
-}
-
-function svgToImageDataUrl(svg: string) {
-	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 async function calculateParentId() {
