@@ -92,17 +92,23 @@ main {
 }
 
 .vector-tile:hover {
-	--bg-opacity: 0.2;
+	--bg-opacity: 0.15;
 }
 
+.vector-tile > * {
+	position: relative;
+}
+
+[data-framer-theme="dark"] .vector-tile,
 .vector-tile.no-bg-color {
 	background: var(--framer-color-bg-secondary);
-	color: var(--framer-color-text-secondary);
+	color: var(--framer-color-text-secondary) !important;
 }
 
+[data-framer-theme="dark"] .vector-tile:hover,
 .vector-tile.no-bg-color:hover {
 	background: var(--framer-color-bg-tertiary);
-	color: var(--framer-color-text-primary);
+	color: var(--framer-color-text-primary) !important;
 }
 
 .vector-tile-bg {
@@ -113,6 +119,11 @@ main {
 	height: 100%;
 	border-radius: inherit;
 	opacity: var(--bg-opacity);
+	transition: opacity 0.1s ease-in-out;
+}
+
+[data-framer-theme="dark"] .vector-tile-bg {
+	display: none;
 }
 
 .vector-svg-container {

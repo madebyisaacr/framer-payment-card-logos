@@ -4,6 +4,7 @@ import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
 import "./App.css";
 import vectorsData from "./data/vectors.json";
+import cx from "classnames";
 
 const IS_CANVAS = framer.mode === "canvas";
 const IS_LOCALHOST =
@@ -25,6 +26,12 @@ type VectorItem = { name: string; svg: string; componentUrl: string; color: stri
 const vectors = vectorsData as VectorItem[];
 
 type InsertAs = "svg" | "vectorSet" | "image";
+
+const INSERT_AS_TITLES = {
+	svg: "SVG",
+	vectorSet: "Vector Set",
+	image: "Image",
+};
 
 export function App() {
 	const [showAdminUI, setShowAdminUI] = useState(false);
@@ -48,7 +55,7 @@ export function App() {
 function PaymentCardLogosApp() {
 	const [query, setQuery] = useState("");
 	const isAllowedToEdit = useIsAllowedTo("addSVG", "addImage", "setImage", "addComponentInstance");
-	const [insertAs, setInsertAs] = useState<InsertAs | "">("");
+	const [insertAs, setInsertAs] = useState<InsertAs>("svg");
 
 	const filteredVectors = vectors.filter((item) => {
 		const q = query.trim().toLowerCase();
@@ -57,9 +64,7 @@ function PaymentCardLogosApp() {
 	});
 
 	const onVectorClick = async (item: VectorItem) => {
-		const currentInsertAs = insertAs === "" ? "svg" : insertAs;
-
-		switch (currentInsertAs) {
+		switch (insertAs) {
 			case "svg": {
 				await framer.addSVG({ svg: item.svg });
 				break;
@@ -79,9 +84,15 @@ function PaymentCardLogosApp() {
 				await framer.addImage({ name: item.name, image: svgDataUrl, altText: item.name });
 				break;
 			}
+			default: {
+				framer.notify("Unsupported insert as selection", { variant: "error" });
+				return;
+			}
 		}
 
-		framer.notify(`Inserted ${item.name} as ${currentInsertAs}`, { variant: "success" });
+		framer.notify(`Inserted ${item.name} as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
+			variant: "success",
+		});
 	};
 
 	return (
@@ -107,9 +118,9 @@ function PaymentCardLogosApp() {
 					<option value="" disabled>
 						Insert as…
 					</option>
-					<option value="svg">SVG</option>
-					<option value="vectorSet">Vector Set</option>
-					<option value="image">Image</option>
+					<option value="svg">{INSERT_AS_TITLES.svg}</option>
+					<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
+					<option value="image">{INSERT_AS_TITLES.image}</option>
 				</select>
 			</div>
 			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
@@ -124,13 +135,19 @@ function PaymentCardLogosApp() {
 					>
 						<div
 							key={item.name}
-							className="vector-tile"
+							className={cx("vector-tile", item.color === null && "no-bg-color")}
 							role="gridcell"
 							title={item.name}
 							onClick={() => {
 								onVectorClick(item);
 							}}
+							style={{
+								color: item.color || "var(--framer-color-text)",
+							}}
 						>
+							{item.color && (
+								<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
+							)}
 							<div className="vector-svg-container">
 								<div
 									className="vector-svg"
