@@ -5,15 +5,21 @@ import { SearchIcon } from "./Icons";
 import "./App.css";
 import vectorsData from "./data/vectors.json";
 
-void framer.showUI({
-	position: "top right",
-	width: 260,
-	height: 400,
-});
-
-const isLocalhost =
+const IS_CANVAS = framer.mode === "canvas";
+const IS_LOCALHOST =
 	typeof window !== "undefined" &&
 	(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+void framer.showUI({
+	position: "top right",
+	width: IS_CANVAS ? 260 : 600,
+	minWidth: IS_CANVAS ? 260 : 600,
+	maxWidth: 600,
+	height: IS_CANVAS ? 450 : 625,
+	minHeight: 400,
+	maxHeight: 740,
+	resizable: IS_CANVAS,
+});
 
 type VectorItem = { name: string; svg: string };
 const vectors = vectorsData as VectorItem[];
@@ -22,7 +28,7 @@ export function App() {
 	const [showAdminUI, setShowAdminUI] = useState(false);
 
 	useEffect(() => {
-		if (!isLocalhost) {
+		if (!IS_LOCALHOST) {
 			void framer.setMenu([]);
 			return;
 		}
@@ -34,7 +40,7 @@ export function App() {
 		]);
 	}, [showAdminUI]);
 
-	return isLocalhost && showAdminUI ? <AdminUI /> : <PaymentCardLogosApp />;
+	return IS_LOCALHOST && showAdminUI ? <AdminUI /> : <PaymentCardLogosApp />;
 }
 
 function PaymentCardLogosApp() {
@@ -45,6 +51,12 @@ function PaymentCardLogosApp() {
 		if (!q) return true;
 		return item.name.toLowerCase().includes(q);
 	});
+
+	const onVectorClick = async (item: VectorItem) => {
+		await framer.addSVG({ svg: item.svg });
+
+		framer.notify(`Inserted ${item.name}`, { variant: "success" });
+	};
 
 	return (
 		<main className="payment-card-logos">
@@ -63,14 +75,26 @@ function PaymentCardLogosApp() {
 
 			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
 				{filteredVectors.map((item) => (
-					<div key={item.name} className="vector-tile" role="gridcell" title={item.name}>
-						<div
-							className="vector-svg"
-							dangerouslySetInnerHTML={{
-								__html: item.svg,
-							}}
-						/>
-						<div className="vector-name">{item.name}</div>
+					<div
+						key={item.name}
+						className="vector-tile"
+						role="gridcell"
+						title={item.name}
+						onClick={() => {
+							onVectorClick(item);
+						}}
+					>
+						<div className="vector-svg-container">
+							<div
+								className="vector-svg"
+								dangerouslySetInnerHTML={{
+									__html: item.svg,
+								}}
+							/>
+						</div>
+						<div className="vector-name-container">
+							<span className="vector-name">{item.name}</span>
+						</div>
 					</div>
 				))}
 			</div>
