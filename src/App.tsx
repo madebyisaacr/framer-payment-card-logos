@@ -22,7 +22,7 @@ const IS_LOCALHOST =
 	(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 const PERMISSION_METHODS = IS_CANVAS
-	? ["addSVG", "createFrameNode", "setImage", "addComponentInstance"]
+	? ["addSVG", "createFrameNode", "setImage", "addComponentInstance", "Node.setAttributes"]
 	: ["setImage"];
 
 void framer.showUI({
@@ -35,6 +35,9 @@ void framer.showUI({
 	maxHeight: 740,
 	resizable: IS_CANVAS,
 });
+
+const FRAME_WIDTH = "50px";
+const FRAME_HEIGHT = "32px";
 
 type VectorItem = {
 	id: string;
@@ -246,8 +249,8 @@ function PaymentCardLogosApp() {
 					const frame = await framer.createFrameNode(
 						{
 							name: vectorName,
-							width: "50px",
-							height: "32px",
+							width: FRAME_WIDTH,
+							height: FRAME_HEIGHT,
 							backgroundImage: image,
 						},
 						parentId
@@ -392,6 +395,21 @@ function PaymentCardLogosApp() {
 												svg: item.svg,
 												invertInDarkMode: false,
 											};
+										}
+									}
+								}}
+								onDragComplete={async (result) => {
+									if (result.status === "error") {
+										void framer.notify(result.reason || "Failed to insert", {
+											variant: "error",
+										});
+									} else if (result.status === "success") {
+										const node = await framer.getNode(result.nodeId);
+										if (isFrameNode(node)) {
+											node.setAttributes({
+												width: FRAME_WIDTH,
+												height: FRAME_HEIGHT,
+											});
 										}
 									}
 								}}
