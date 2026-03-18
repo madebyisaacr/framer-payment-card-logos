@@ -1,4 +1,4 @@
-import { framer } from "framer-plugin";
+import { framer, Draggable } from "framer-plugin";
 import { useState, useEffect } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -75,27 +75,36 @@ function PaymentCardLogosApp() {
 
 			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
 				{filteredVectors.map((item) => (
-					<div
+					<Draggable
 						key={item.name}
-						className="vector-tile"
-						role="gridcell"
-						title={item.name}
-						onClick={() => {
-							onVectorClick(item);
+						data={{
+							type: "svg",
+							svg: item.svg,
+							invertInDarkMode: false,
 						}}
 					>
-						<div className="vector-svg-container">
-							<div
-								className="vector-svg"
-								dangerouslySetInnerHTML={{
-									__html: item.svg,
-								}}
-							/>
+						<div
+							key={item.name}
+							className="vector-tile"
+							role="gridcell"
+							title={item.name}
+							onClick={() => {
+								onVectorClick(item);
+							}}
+						>
+							<div className="vector-svg-container">
+								<div
+									className="vector-svg"
+									dangerouslySetInnerHTML={{
+										__html: item.svg,
+									}}
+								/>
+							</div>
+							<div className="vector-name-container">
+								<span className="vector-name">{item.name}</span>
+							</div>
 						</div>
-						<div className="vector-name-container">
-							<span className="vector-name">{item.name}</span>
-						</div>
-					</div>
+					</Draggable>
 				))}
 			</div>
 		</main>

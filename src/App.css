@@ -74,6 +74,8 @@ main {
 		background 0.1s ease-in-out,
 		color 0.1s ease-in-out;
 	aspect-ratio: 1;
+	cursor: pointer;
+	user-select: none;
 }
 
 .vector-tile:hover {
