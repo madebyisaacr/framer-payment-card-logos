@@ -1,5 +1,5 @@
 import { framer, Draggable, useIsAllowedTo } from "framer-plugin";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
 import "./App.css";
@@ -37,6 +37,14 @@ const INSERT_AS_TITLES = {
 	image: "Image",
 };
 
+const INSERT_AS_WIDTH = {
+	svg: 60,
+	vectorSet: 95,
+	image: 70,
+};
+
+const INSERT_AS_STORAGE_KEY = "framer-payment-card-logos.insertAs";
+
 function formatVectorName(name: string) {
 	// Removes everything in parentheses, e.g. "Apple Pay (Light)" -> "Apple Pay"
 	return name.replace(/\s*\([^)]*\)/g, "").trim();
@@ -65,7 +73,23 @@ function PaymentCardLogosApp() {
 	const isAllowedToEdit = useIsAllowedTo(...PERMISSION_METHODS);
 
 	const [query, setQuery] = useState("");
-	const [insertAs, setInsertAs] = useState<InsertAs>("svg");
+	const [insertAs, setInsertAs] = useState<InsertAs>(() => {
+		try {
+			const raw = window.localStorage.getItem(INSERT_AS_STORAGE_KEY);
+			if (raw && raw in INSERT_AS_TITLES) return raw as InsertAs;
+		} catch {
+			// Ignore storage errors (private mode / sandboxed environments).
+		}
+		return "svg";
+	});
+
+	useEffect(() => {
+		try {
+			window.localStorage.setItem(INSERT_AS_STORAGE_KEY, insertAs);
+		} catch {
+			// Ignore storage errors.
+		}
+	}, [insertAs]);
 
 	const filteredVectors = vectors.filter((item) => {
 		const q = query.trim().toLowerCase();
@@ -82,8 +106,11 @@ function PaymentCardLogosApp() {
 		const vectorName = formatVectorName(item.name);
 
 		if (!IS_CANVAS) {
-			const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
-			await framer.setImage({ name: vectorName, image: svgDataUrl, altText: vectorName });
+			await framer.setImage({
+				name: vectorName,
+				image: svgToImageDataUrl(item.svg),
+				altText: vectorName,
+			});
 			framer.closePlugin();
 		}
 
@@ -103,8 +130,11 @@ function PaymentCardLogosApp() {
 				break;
 			}
 			case "image": {
-				const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
-				await framer.addImage({ name: vectorName, image: svgDataUrl, altText: vectorName });
+				await framer.addImage({
+					name: vectorName,
+					image: svgToImageDataUrl(item.svg),
+					altText: vectorName,
+				});
 				break;
 			}
 			default: {
@@ -128,6 +158,7 @@ function PaymentCardLogosApp() {
 						value={query}
 						className="search-input"
 						onChange={(e) => setQuery(e.target.value)}
+						autoFocus
 					/>
 					<div className="search-icon-wrap">
 						<SearchIcon />
@@ -138,6 +169,7 @@ function PaymentCardLogosApp() {
 						className="insert-type-dropdown"
 						value={insertAs}
 						onChange={(e) => setInsertAs(e.target.value as InsertAs)}
+						style={{ width: INSERT_AS_WIDTH[insertAs] ?? 95 }}
 					>
 						<option value="" disabled>
 							Insert as…
@@ -161,10 +193,31 @@ function PaymentCardLogosApp() {
 						return (
 							<Draggable
 								key={item.name}
-								data={{
-									type: "svg",
-									svg: item.svg,
-									invertInDarkMode: false,
+								data={() => {
+									switch (insertAs) {
+										case "vectorSet": {
+											return {
+												type: "componentInstance",
+												url: item.componentUrl,
+											};
+										}
+										case "image": {
+											return {
+												type: "image",
+												image: svgToImageDataUrl(item.svg),
+												altText: item.name,
+												name: item.name,
+											};
+										}
+										case "svg":
+										default: {
+											return {
+												type: "svg",
+												svg: item.svg,
+												invertInDarkMode: false,
+											};
+										}
+									}
 								}}
 							>
 								<div
@@ -201,4 +254,8 @@ function PaymentCardLogosApp() {
 			)}
 		</main>
 	);
+}
+
+function svgToImageDataUrl(svg: string) {
+	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
