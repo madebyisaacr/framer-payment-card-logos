@@ -11,9 +11,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
-import "./App.css";
 import vectorsData from "./data/vectors.json";
 import cx from "classnames";
+import { copyToClipboard } from "./utils";
+import "./App.css";
 
 const IS_CANVAS = framer.mode === "canvas";
 const IS_LOCALHOST =
@@ -259,6 +260,54 @@ function PaymentCardLogosApp() {
 		}
 	};
 
+	const onVectorContextMenu = (e: React.MouseEvent<HTMLDivElement>, item: VectorItem) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		void framer.showContextMenu(
+			[
+				{
+					label: "Copy SVG",
+					onAction: async () => {
+						const success = await copyToClipboard(item.svg);
+						const name = formatVectorName(item.name);
+						if (success) {
+							void framer.notify(`Copied ${name} SVG to clipboard`, {
+								variant: "success",
+							});
+						} else {
+							void framer.notify(`Failed to copy ${name} SVG to clipboard`, {
+								variant: "error",
+							});
+						}
+					},
+				},
+				{
+					label: "Copy Vector Insert URL",
+					onAction: async () => {
+						const success = await copyToClipboard(item.componentUrl);
+						const name = formatVectorName(item.name);
+						if (success) {
+							void framer.notify(`Copied ${name} vector insert URL to clipboard`, {
+								variant: "success",
+							});
+						} else {
+							void framer.notify(`Failed to copy ${name} vector insert URL to clipboard`, {
+								variant: "error",
+							});
+						}
+					},
+				},
+			],
+			{
+				location: {
+					x: e.clientX,
+					y: e.clientY,
+				},
+			}
+		);
+	};
+
 	return (
 		<main className="payment-card-logos">
 			<div className="toolbar">
@@ -339,6 +388,9 @@ function PaymentCardLogosApp() {
 									onClick={() => {
 										if (insertingVectorId === item.id) return;
 										onVectorClick(item);
+									}}
+									onContextMenu={(e) => {
+										onVectorContextMenu(e, item);
 									}}
 									style={{
 										color: item.color || "var(--framer-color-text)",
