@@ -95,6 +95,7 @@ main {
 	cursor: pointer;
 	user-select: none;
 	position: relative;
+	padding-top: 8px;
 	--bg-opacity: 0.1;
 }
 

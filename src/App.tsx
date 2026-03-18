@@ -33,6 +33,11 @@ const INSERT_AS_TITLES = {
 	image: "Image",
 };
 
+function formatVectorName(name: string) {
+	// Removes everything in parentheses, e.g. "Apple Pay (Light)" -> "Apple Pay"
+	return name.replace(/\s*\([^)]*\)/g, "").trim();
+}
+
 export function App() {
 	const [showAdminUI, setShowAdminUI] = useState(false);
 
@@ -63,9 +68,11 @@ function PaymentCardLogosApp() {
 	});
 
 	const onVectorClick = async (item: VectorItem) => {
+		const vectorName = formatVectorName(item.name);
+
 		if (!IS_CANVAS) {
 			const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
-			await framer.setImage({ name: item.name, image: svgDataUrl, altText: item.name });
+			await framer.setImage({ name: vectorName, image: svgDataUrl, altText: vectorName });
 			framer.closePlugin();
 			return;
 		}
@@ -79,7 +86,7 @@ function PaymentCardLogosApp() {
 				// `vectors.json` provides the module URL we can use to insert the ComponentInstance.
 				const componentUrl = item.componentUrl;
 				if (typeof componentUrl !== "string" || !componentUrl) {
-					framer.notify(`Missing component URL for ${item.name}`, { variant: "error" });
+					framer.notify(`Missing component URL for ${vectorName}`, { variant: "error" });
 					return;
 				}
 				await framer.addComponentInstance({ url: componentUrl });
@@ -87,7 +94,7 @@ function PaymentCardLogosApp() {
 			}
 			case "image": {
 				const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
-				await framer.addImage({ name: item.name, image: svgDataUrl, altText: item.name });
+				await framer.addImage({ name: vectorName, image: svgDataUrl, altText: vectorName });
 				break;
 			}
 			default: {
@@ -96,7 +103,7 @@ function PaymentCardLogosApp() {
 			}
 		}
 
-		framer.notify(`Inserted ${item.name} as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
+		framer.notify(`Inserted ${vectorName} as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
 			variant: "success",
 		});
 	};
@@ -136,44 +143,47 @@ function PaymentCardLogosApp() {
 				role="grid"
 				aria-label="Payment card logos"
 			>
-				{filteredVectors.map((item) => (
-					<Draggable
-						key={item.name}
-						data={{
-							type: "svg",
-							svg: item.svg,
-							invertInDarkMode: false,
-						}}
-					>
-						<div
+				{filteredVectors.map((item) => {
+					const displayName = formatVectorName(item.name);
+					return (
+						<Draggable
 							key={item.name}
-							className={cx("vector-tile", item.color === null && "no-bg-color")}
-							role="gridcell"
-							title={item.name}
-							onClick={() => {
-								onVectorClick(item);
-							}}
-							style={{
-								color: item.color || "var(--framer-color-text)",
+							data={{
+								type: "svg",
+								svg: item.svg,
+								invertInDarkMode: false,
 							}}
 						>
-							{item.color && (
-								<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
-							)}
-							<div className="vector-svg-container">
-								<div
-									className="vector-svg"
-									dangerouslySetInnerHTML={{
-										__html: item.svg,
-									}}
-								/>
+							<div
+								key={item.name}
+								className={cx("vector-tile", item.color === null && "no-bg-color")}
+								role="gridcell"
+								title={displayName}
+								onClick={() => {
+									onVectorClick(item);
+								}}
+								style={{
+									color: item.color || "var(--framer-color-text)",
+								}}
+							>
+								{item.color && (
+									<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
+								)}
+								<div className="vector-svg-container">
+									<div
+										className="vector-svg"
+										dangerouslySetInnerHTML={{
+											__html: item.svg,
+										}}
+									/>
+								</div>
+								<div className="vector-name-container">
+									<span className="vector-name">{displayName}</span>
+								</div>
 							</div>
-							<div className="vector-name-container">
-								<span className="vector-name">{item.name}</span>
-							</div>
-						</div>
-					</Draggable>
-				))}
+						</Draggable>
+					);
+				})}
 			</div>
 		</main>
 	);
