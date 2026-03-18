@@ -71,12 +71,25 @@ main {
 	overflow: auto;
 }
 
+.empty-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	width: 100%;
+	flex: 1;
+	min-height: 0;
+	color: var(--framer-color-text-secondary);
+	padding: 20px;
+	pointer-events: none;
+}
+
 .vectors-grid.canvas {
 	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 5)), 1fr));
 }
 
 .vectors-grid.image {
-	grid-template-columns: repeat(5, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 6)), 1fr));
 }
 
 .vector-tile {

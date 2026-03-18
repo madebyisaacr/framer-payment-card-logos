@@ -1,4 +1,4 @@
-import { framer, Draggable } from "framer-plugin";
+import { framer, Draggable, useIsAllowedTo } from "framer-plugin";
 import { useState, useEffect } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -10,6 +10,10 @@ const IS_CANVAS = framer.mode === "canvas";
 const IS_LOCALHOST =
 	typeof window !== "undefined" &&
 	(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const PERMISSION_METHODS = IS_CANVAS
+	? ["addSVG", "addImage", "setImage", "addComponentInstance"]
+	: ["setImage"];
 
 void framer.showUI({
 	position: "top right",
@@ -58,6 +62,8 @@ export function App() {
 }
 
 function PaymentCardLogosApp() {
+	const isAllowedToEdit = useIsAllowedTo(...PERMISSION_METHODS);
+
 	const [query, setQuery] = useState("");
 	const [insertAs, setInsertAs] = useState<InsertAs>("svg");
 
@@ -68,13 +74,17 @@ function PaymentCardLogosApp() {
 	});
 
 	const onVectorClick = async (item: VectorItem) => {
+		if (!isAllowedToEdit) {
+			framer.notify("You do not have permissions to edit this project", { variant: "error" });
+			return;
+		}
+
 		const vectorName = formatVectorName(item.name);
 
 		if (!IS_CANVAS) {
 			const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
 			await framer.setImage({ name: vectorName, image: svgDataUrl, altText: vectorName });
 			framer.closePlugin();
-			return;
 		}
 
 		switch (insertAs) {
@@ -138,53 +148,57 @@ function PaymentCardLogosApp() {
 					</select>
 				)}
 			</div>
-			<div
-				className={cx("vectors-grid", IS_CANVAS ? "canvas" : "image")}
-				role="grid"
-				aria-label="Payment card logos"
-			>
-				{filteredVectors.map((item) => {
-					const displayName = formatVectorName(item.name);
-					return (
-						<Draggable
-							key={item.name}
-							data={{
-								type: "svg",
-								svg: item.svg,
-								invertInDarkMode: false,
-							}}
-						>
-							<div
+			{filteredVectors.length === 0 ? (
+				<div className="empty-state">No results for "{query}"</div>
+			) : (
+				<div
+					className={cx("vectors-grid", IS_CANVAS ? "canvas" : "image")}
+					role="grid"
+					aria-label="Payment card logos"
+				>
+					{filteredVectors.map((item) => {
+						const displayName = formatVectorName(item.name);
+						return (
+							<Draggable
 								key={item.name}
-								className={cx("vector-tile", item.color === null && "no-bg-color")}
-								role="gridcell"
-								title={displayName}
-								onClick={() => {
-									onVectorClick(item);
-								}}
-								style={{
-									color: item.color || "var(--framer-color-text)",
+								data={{
+									type: "svg",
+									svg: item.svg,
+									invertInDarkMode: false,
 								}}
 							>
-								{item.color && (
-									<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
-								)}
-								<div className="vector-svg-container">
-									<div
-										className="vector-svg"
-										dangerouslySetInnerHTML={{
-											__html: item.svg,
-										}}
-									/>
+								<div
+									key={item.name}
+									className={cx("vector-tile", item.color === null && "no-bg-color")}
+									role="gridcell"
+									title={displayName}
+									onClick={() => {
+										onVectorClick(item);
+									}}
+									style={{
+										color: item.color || "var(--framer-color-text)",
+									}}
+								>
+									{item.color && (
+										<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
+									)}
+									<div className="vector-svg-container">
+										<div
+											className="vector-svg"
+											dangerouslySetInnerHTML={{
+												__html: item.svg,
+											}}
+										/>
+									</div>
+									<div className="vector-name-container">
+										<span className="vector-name">{displayName}</span>
+									</div>
 								</div>
-								<div className="vector-name-container">
-									<span className="vector-name">{displayName}</span>
-								</div>
-							</div>
-						</Draggable>
-					);
-				})}
-			</div>
+							</Draggable>
+						);
+					})}
+				</div>
+			)}
 		</main>
 	);
 }
