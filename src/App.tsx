@@ -1,4 +1,4 @@
-import { framer, Draggable, useIsAllowedTo } from "framer-plugin";
+import { framer, Draggable } from "framer-plugin";
 import { useState, useEffect } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -54,7 +54,6 @@ export function App() {
 
 function PaymentCardLogosApp() {
 	const [query, setQuery] = useState("");
-	const isAllowedToEdit = useIsAllowedTo("addSVG", "addImage", "setImage", "addComponentInstance");
 	const [insertAs, setInsertAs] = useState<InsertAs>("svg");
 
 	const filteredVectors = vectors.filter((item) => {
@@ -64,6 +63,13 @@ function PaymentCardLogosApp() {
 	});
 
 	const onVectorClick = async (item: VectorItem) => {
+		if (!IS_CANVAS) {
+			const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.svg)}`;
+			await framer.setImage({ name: item.name, image: svgDataUrl, altText: item.name });
+			framer.closePlugin();
+			return;
+		}
+
 		switch (insertAs) {
 			case "svg": {
 				await framer.addSVG({ svg: item.svg });
@@ -110,20 +116,26 @@ function PaymentCardLogosApp() {
 						<SearchIcon />
 					</div>
 				</div>
-				<select
-					className="insert-type-dropdown"
-					value={insertAs}
-					onChange={(e) => setInsertAs(e.target.value as InsertAs | "")}
-				>
-					<option value="" disabled>
-						Insert as…
-					</option>
-					<option value="svg">{INSERT_AS_TITLES.svg}</option>
-					<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
-					<option value="image">{INSERT_AS_TITLES.image}</option>
-				</select>
+				{IS_CANVAS && (
+					<select
+						className="insert-type-dropdown"
+						value={insertAs}
+						onChange={(e) => setInsertAs(e.target.value as InsertAs)}
+					>
+						<option value="" disabled>
+							Insert as…
+						</option>
+						<option value="svg">{INSERT_AS_TITLES.svg}</option>
+						<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
+						<option value="image">{INSERT_AS_TITLES.image}</option>
+					</select>
+				)}
 			</div>
-			<div className="vectors-grid" role="grid" aria-label="Payment card logos">
+			<div
+				className={cx("vectors-grid", IS_CANVAS ? "canvas" : "image")}
+				role="grid"
+				aria-label="Payment card logos"
+			>
 				{filteredVectors.map((item) => (
 					<Draggable
 						key={item.name}

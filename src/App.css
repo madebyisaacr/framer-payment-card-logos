@@ -64,12 +64,19 @@ main {
 .vectors-grid {
 	width: 100%;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 5)), 1fr));
 	gap: 10px;
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
 	padding-bottom: 15px;
 	overflow: auto;
+}
+
+.vectors-grid.canvas {
+	grid-template-columns: repeat(auto-fit, minmax(max(100px, calc(100% / 5)), 1fr));
+}
+
+.vectors-grid.image {
+	grid-template-columns: repeat(5, 1fr);
 }
 
 .vector-tile {
