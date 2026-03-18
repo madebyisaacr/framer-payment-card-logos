@@ -1,4 +1,11 @@
-import { framer, Draggable, useIsAllowedTo } from "framer-plugin";
+import {
+	framer,
+	Draggable,
+	useIsAllowedTo,
+	isFrameNode,
+	isWebPageNode,
+	isComponentNode,
+} from "framer-plugin";
 import { useEffect, useState } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -126,15 +133,39 @@ function PaymentCardLogosApp() {
 					framer.notify(`Missing component URL for ${vectorName}`, { variant: "error" });
 					return;
 				}
-				await framer.addComponentInstance({ url: componentUrl });
+
+				const parentId = await calculateParentId();
+
+				const componentInstanceNode = await framer.addComponentInstance({ url: componentUrl });
+				if (componentInstanceNode) {
+					await framer.setParent(componentInstanceNode.id, parentId);
+					framer.setSelection([componentInstanceNode.id]);
+					await new Promise((resolve) => setTimeout(resolve, 50));
+					framer.zoomIntoView(componentInstanceNode.id, {
+						maxZoom: 1,
+					});
+				}
 				break;
 			}
 			case "image": {
-				await framer.addImage({
-					name: vectorName,
+				const parentId = await calculateParentId();
+
+				const image = await framer.uploadImage({
 					image: svgToImageDataUrl(item.svg),
 					altText: vectorName,
 				});
+				const frame = await framer.createFrameNode(
+					{
+						name: vectorName,
+						width: "50px",
+						height: "32px",
+						backgroundImage: image,
+					},
+					parentId
+				);
+				if (frame) {
+					framer.setSelection([frame.id]);
+				}
 				break;
 			}
 			default: {
@@ -143,7 +174,7 @@ function PaymentCardLogosApp() {
 			}
 		}
 
-		framer.notify(`Inserted ${vectorName} as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
+		framer.notify(`Inserted ${vectorName} card as ${INSERT_AS_TITLES[insertAs] || insertAs}`, {
 			variant: "success",
 		});
 	};
@@ -258,4 +289,35 @@ function PaymentCardLogosApp() {
 
 function svgToImageDataUrl(svg: string) {
 	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+async function calculateParentId() {
+	const selection = await framer.getSelection();
+	const selectedFrames = selection.filter(isFrameNode);
+	let parentId = selectedFrames[0]?.id;
+
+	if (!parentId) {
+		const canvasRoot = await framer.getCanvasRoot();
+		if (isWebPageNode(canvasRoot)) {
+			const children = await canvasRoot.getChildren();
+			const primaryBreakpoint = children?.find(
+				(child) => isFrameNode(child) && child.isPrimaryBreakpoint
+			);
+
+			if (primaryBreakpoint) {
+				parentId = primaryBreakpoint.id;
+			}
+		} else if (isComponentNode(canvasRoot)) {
+			const children = await canvasRoot.getChildren();
+			const primaryVariant = children?.find(
+				(child) => isFrameNode(child) && child.isPrimaryVariant
+			);
+
+			if (primaryVariant) {
+				parentId = primaryVariant.id;
+			}
+		}
+	}
+
+	return parentId;
 }
