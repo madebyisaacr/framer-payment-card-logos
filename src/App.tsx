@@ -7,7 +7,7 @@ import {
 	isComponentNode,
 	type CanvasRootNode,
 	type FrameNode,
-} from "framer-plugin";
+} from "@framer/plugin";
 import { useEffect, useRef, useState } from "react";
 import AdminUI from "./AdminUI";
 import { SearchIcon } from "./Icons";
@@ -327,35 +327,38 @@ function PaymentCardLogosApp() {
 
 	return (
 		<main className="payment-card-logos">
-			<div className="toolbar">
-				<div className="search-header">
-					<input
-						type="text"
-						placeholder="Search…"
-						value={query}
-						className="search-input"
-						onChange={(e) => setQuery(e.target.value)}
-						autoFocus
-					/>
-					<div className="search-icon-wrap">
-						<SearchIcon />
+			<div className="toolbar-container">
+				<div className="toolbar">
+					<div className="search-header">
+						<input
+							type="text"
+							placeholder="Search…"
+							value={query}
+							className="search-input"
+							onChange={(e) => setQuery(e.target.value)}
+							autoFocus
+						/>
+						<div className="search-icon-wrap">
+							<SearchIcon />
+						</div>
 					</div>
+					{IS_CANVAS && (
+						<select
+							className="insert-type-dropdown"
+							value={insertAs}
+							onChange={(e) => setInsertAs(e.target.value as InsertAs)}
+							style={{ width: INSERT_AS_WIDTH[insertAs] ?? 95 }}
+						>
+							<option value="" disabled>
+								Insert as…
+							</option>
+							<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
+							<option value="svg">{INSERT_AS_TITLES.svg}</option>
+							<option value="image">{INSERT_AS_TITLES.image}</option>
+						</select>
+					)}
 				</div>
-				{IS_CANVAS && (
-					<select
-						className="insert-type-dropdown"
-						value={insertAs}
-						onChange={(e) => setInsertAs(e.target.value as InsertAs)}
-						style={{ width: INSERT_AS_WIDTH[insertAs] ?? 95 }}
-					>
-						<option value="" disabled>
-							Insert as…
-						</option>
-						<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
-						<option value="svg">{INSERT_AS_TITLES.svg}</option>
-						<option value="image">{INSERT_AS_TITLES.image}</option>
-					</select>
-				)}
+				<hr />
 			</div>
 			{filteredVectors.length === 0 ? (
 				<div className="empty-state">No results for "{query}"</div>
@@ -426,13 +429,7 @@ function PaymentCardLogosApp() {
 									onContextMenu={(e) => {
 										onVectorContextMenu(e, item);
 									}}
-									style={{
-										color: item.color || "var(--framer-color-text)",
-									}}
 								>
-									{item.color && (
-										<div className="vector-tile-bg" style={{ backgroundColor: item.color }} />
-									)}
 									<div
 										className={cx(
 											"spinner-container",

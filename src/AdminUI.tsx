@@ -1,4 +1,4 @@
-import { framer, useIsAllowedTo, isVectorSetItemNode, isFrameNode } from "framer-plugin";
+import { framer, useIsAllowedTo, isVectorSetItemNode, isFrameNode } from "@framer/plugin";
 import { copyToClipboard } from "./utils";
 import { useState } from "react";
 import vectorsData from "./data/vectors.json";
