@@ -106,6 +106,8 @@ function PaymentCardLogosApp() {
 	});
 
 	const insertRequestIdRef = useRef(0);
+	const searchInputRef = useRef<HTMLInputElement>(null);
+	const insertTypeButtonRef = useRef<HTMLDivElement>(null);
 	const [insertingVectorId, setInsertingVectorId] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -115,6 +117,21 @@ function PaymentCardLogosApp() {
 			// Ignore storage errors.
 		}
 	}, [insertAs]);
+
+	useEffect(() => {
+		const onKeyDown = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+				e.preventDefault();
+				const input = searchInputRef.current;
+				if (!input) return;
+				input.focus();
+				input.select();
+			}
+		};
+
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
 
 	const filteredVectors = vectors.filter((item) => {
 		const q = query.trim().toLowerCase();
@@ -277,6 +294,33 @@ function PaymentCardLogosApp() {
 		}
 	};
 
+	const showInsertTypeDropdown = () => {
+		const rect = insertTypeButtonRef.current?.getBoundingClientRect();
+
+		void framer.showContextMenu(
+			[
+				{
+					label: "Insert as…",
+					enabled: false,
+				},
+				{ type: "separator" },
+				...(Object.keys(INSERT_AS_TITLES) as InsertAs[]).map((value) => ({
+					label: INSERT_AS_TITLES[value],
+					checked: insertAs === value,
+					onAction: () => setInsertAs(value),
+				})),
+			],
+			{
+				location: {
+					x: (rect?.x ?? 0) + (rect?.width ?? 0),
+					y: (rect?.y ?? 0) + (rect?.height ?? 0) + 4,
+				},
+				width: 120,
+				placement: "bottom-left",
+			}
+		);
+	};
+
 	const onVectorContextMenu = (e: React.MouseEvent<HTMLDivElement>, item: VectorItem) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -331,6 +375,7 @@ function PaymentCardLogosApp() {
 				<div className="toolbar">
 					<div className="search-header">
 						<input
+							ref={searchInputRef}
 							type="text"
 							placeholder="Search…"
 							value={query}
@@ -343,19 +388,32 @@ function PaymentCardLogosApp() {
 						</div>
 					</div>
 					{IS_CANVAS && (
-						<select
+						<div
+							ref={insertTypeButtonRef}
 							className="insert-type-dropdown"
-							value={insertAs}
-							onChange={(e) => setInsertAs(e.target.value as InsertAs)}
+							aria-label="Insert as"
 							style={{ width: INSERT_AS_WIDTH[insertAs] ?? 95 }}
+							onClick={showInsertTypeDropdown}
 						>
-							<option value="" disabled>
-								Insert as…
-							</option>
-							<option value="vectorSet">{INSERT_AS_TITLES.vectorSet}</option>
-							<option value="svg">{INSERT_AS_TITLES.svg}</option>
-							<option value="image">{INSERT_AS_TITLES.image}</option>
-						</select>
+							{INSERT_AS_TITLES[insertAs]}
+							<svg
+								role="presentation"
+								xmlns="http://www.w3.org/2000/svg"
+								width="8"
+								height="8"
+								viewBox="0 0 8 8"
+								aria-hidden="true"
+							>
+								<path
+									d="m1 2.75 2.293 2.293a1 1 0 0 0 1.414 0L7 2.75"
+									fill="transparent"
+									strokeWidth="1.5"
+									stroke="currentColor"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+							</svg>
+						</div>
 					)}
 				</div>
 				<hr />

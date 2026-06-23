@@ -67,7 +67,21 @@ main {
 }
 
 .insert-type-dropdown {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 30px;
+	padding: 0 10px;
+	border-radius: 8px;
+	background-color: var(--framer-color-control);
+	cursor: pointer;
 	user-select: none;
+}
+
+.insert-type-dropdown svg {
+	color: #999;
+	pointer-events: none;
 }
 
 .payment-card-logos {
